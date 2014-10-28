@@ -8,7 +8,7 @@ DATA DEUDA_MES_SIN_TRADUCIR;
 SET RKD.DEUDAS;
 
 /*INGRESAR PARÁMETRO FECHA-----&DDMMMAAAA ej:'31AUG2014'*/
-WHERE FECHA_PROCESO='30SEP2014'd AND SISTEMA_ORIGEN='AA';
+WHERE FECHA_PROCESO=''d AND SISTEMA_ORIGEN='AA';
 
 DROP capital_novencido ajuste_novencido interes_devengado capital_vencido
      ajuste_vencido interes_nodevengado iva_vencido iva_novencido;
