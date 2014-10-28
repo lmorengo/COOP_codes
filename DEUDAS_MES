@@ -1,17 +1,18 @@
-/*ESTE CÓDIGO EJECUTA UN PERÍODO PARAMETRIZADO DE DEUDAS DECODIFICADO*/
+/*ESTE CÓDIGO EJECUTA UN PERÍODO PARAMETRIZADO DE DEUDAS DECODIFICADO 
+Y AGREGA CAMPOS DE PERSONAS*/
 
+/*TARDA UNOS 7 MINUTOS APROX*/
 
 /*GENERO DEUDAS DE UN PERÍODO*/
 DATA DEUDA_MES_SIN_TRADUCIR;
 SET RKD.DEUDAS;
 
 /*INGRESAR PARÁMETRO FECHA-----&DDMMMAAAA ej:'31AUG2014'*/
-WHERE FECHA_PROCESO=''d AND SISTEMA_ORIGEN='AA';
+WHERE FECHA_PROCESO='30SEP2014'd AND SISTEMA_ORIGEN='AA';
 
 DROP capital_novencido ajuste_novencido interes_devengado capital_vencido
      ajuste_vencido interes_nodevengado iva_vencido iva_novencido;
 RUN;
-
 
 /*GENERO ALGUNOS LOOKUPS*/
 DATA LOOKUP_1;
@@ -36,7 +37,7 @@ RUN;
 
 /*MERGE DEUDA CON LOOKUPS (TABLA FINAL)*/
 PROC SQL;
-   CREATE TABLE DEUDA_MES AS 
+   CREATE TABLE DEUDA_TRADUCIDA AS 
    SELECT t1.dw_cst_id, 
           t1.tipodoc, 
           t1.nrodoc, 
@@ -68,7 +69,6 @@ PROC SQL;
                     t1.codprov;
 QUIT;
 
-
 /*DROPEO TABLAS INTERMEDIAS*/
 PROC SQL;
 DROP TABLE DEUDA_MES_SIN_TRADUCIR;
@@ -78,4 +78,70 @@ DROP TABLE LOOKUP_3;
 DROP TABLE LOOKUP_4;
 DROP TABLE LOOKUP_5;
 DROP TABLE LOOKUP_6;
+QUIT;
+
+
+/*A LA DEUDA DEL MES LE HAGO UN JOIN CON PERSONAS
+PARA OBTENER OTROS CAMPOS COMUNMENTE USADOS*/
+PROC SQL;
+CREATE TABLE WORK.DEUDA_CON_IDPERSONAS AS 
+   SELECT t1.dw_cst_id, 
+          t1.tipodoc, 
+          t1.nrodoc, 
+          t1.codprov, 
+          t2.persona_id, 
+          t2.cuit_no, 
+          t2.segmento_id, 
+/*Además podría incluir acá comno "t2" los campos de personas:
+nombre sexo sector_ciiu rama_ciiu subrama_ciiu segmento_estrategico_id
+categoria_empresa_id sector_bcra fecha_nacimiento_constitucion*/
+          t1.total_deuda, 
+          t1.PREFERENCIA_GTIA, 
+          t1.cantidad_dias_deudor, 
+          t1.SISTEMA, 
+          t1.moneda, 
+          t1.cuenta_nro, 
+          t1.operacion_nro, 
+          t1.PRODUCTO_SC, 
+          t1.TIPO_DEUDA, 
+          t1.ESTADO_SITUACION, 
+          t1.TIPO_GARANTIA, 
+          t1.SISTEMA_ORIGEN, 
+          t1.FECHA_PROCESO, 
+          t1.SUCURSAL, 
+          t1.PREVISION
+FROM WORK.DEUDA_TRADUCIDA t1
+LEFT JOIN RKD.PERSONAS t2 ON (t1.tipodoc = t2.tipodoc) AND (t1.nrodoc = t2.nrodoc) AND (t1.codprov = 
+          t2.codprov);
+QUIT;
+
+DATA LOOKUP_1;
+SET RKD.LOOKUP;
+RUN;
+
+/*TRADUZCO EL CAMPO "segmento_id" QUE ES EL ÚNICO CAMPO QUE QUEDA CODIFICADO*/
+PROC SORT DATA=DEUDA_CON_IDPERSONAS;
+BY segmento_id;
+RUN;
+PROC SORT DATA=LOOKUP_1;
+BY CLAVE;
+RUN;
+DATA DEUDA_MES;
+MERGE DEUDA_CON_IDPERSONAS (IN=A)
+      LOOKUP_1 (IN=B RENAME=(CLAVE=segmento_id));
+IF A=1 AND B=1 OR B=0;
+BY segmento_id;
+RUN;
+DATA DEUDA_MES (RENAME=(Descripcion=SEGMENTO));
+SET DEUDA_MES;
+DROP Valor segmento_id;
+RUN;
+PROC SORT DATA=DEUDA_MES;
+BY persona_id;
+RUN;
+    /*DROPEO TABLAS INTERMEDIAS*/
+PROC SQL;
+DROP TABLE DEUDA_TRADUCIDA;
+DROP TABLE DEUDA_CON_IDPERSONAS;
+DROP TABLE LOOKUP_1;
 QUIT;
