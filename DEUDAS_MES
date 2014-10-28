@@ -1,0 +1,81 @@
+/*ESTE CÓDIGO EJECUTA UN PERÍODO PARAMETRIZADO DE DEUDAS DECODIFICADO*/
+
+
+/*GENERO DEUDAS DE UN PERÍODO*/
+DATA DEUDA_MES_SIN_TRADUCIR;
+SET RKD.DEUDAS;
+
+/*INGRESAR PARÁMETRO FECHA-----&DDMMMAAAA ej:'31AUG2014'*/
+WHERE FECHA_PROCESO=''d AND SISTEMA_ORIGEN='AA';
+
+DROP capital_novencido ajuste_novencido interes_devengado capital_vencido
+     ajuste_vencido interes_nodevengado iva_vencido iva_novencido;
+RUN;
+
+
+/*GENERO ALGUNOS LOOKUPS*/
+DATA LOOKUP_1;
+SET RKD.LOOKUP;
+RUN;
+DATA LOOKUP_2;
+SET RKD.LOOKUP;
+RUN;
+DATA LOOKUP_3;
+SET RKD.LOOKUP;
+RUN;
+DATA LOOKUP_4;
+SET RKD.LOOKUP;
+RUN;
+DATA LOOKUP_5;
+SET RKD.LOOKUP;
+RUN;
+DATA LOOKUP_6;
+SET RKD.LOOKUP;
+RUN;
+
+
+/*MERGE DEUDA CON LOOKUPS (TABLA FINAL)*/
+PROC SQL;
+   CREATE TABLE DEUDA_MES AS 
+   SELECT t1.dw_cst_id, 
+          t1.tipodoc, 
+          t1.nrodoc, 
+          t1.codprov, 
+          t1.total_deuda, 
+          t7.Valor AS PREFERENCIA_GTIA, 
+          t1.cantidad_dias_deudor, 
+          t2.Valor AS SISTEMA, 
+          t1.moneda, 
+          t1.cuenta_nro, 
+          t1.operacion_nro, 
+          t3.Valor AS PRODUCTO_SC, 
+          t4.Valor AS TIPO_DEUDA, 
+          t5.Valor AS ESTADO_SITUACION, 
+          t6.Valor AS TIPO_GARANTIA, 
+          t1.SISTEMA_ORIGEN, 
+          t1.FECHA_PROCESO, 
+          t1.SUCURSAL, 
+          t1.PREVISION
+      FROM DEUDA_MES_SIN_TRADUCIR t1
+           LEFT JOIN WORK.LOOKUP_1 t2 ON (t1.sistema = t2.Clave)
+           LEFT JOIN WORK.LOOKUP_2 t3 ON (t1.producto_sc_id = t3.Clave)
+           LEFT JOIN WORK.LOOKUP_3 t4 ON (t1.tipo_deuda_id = t4.Clave)
+           LEFT JOIN WORK.LOOKUP_4 t5 ON (t1.ESTADO_SITUACION = t5.Clave)
+           LEFT JOIN WORK.LOOKUP_5 t6 ON (t1.TIPO_GARANTIA = t6.Clave)
+		   LEFT JOIN WORK.LOOKUP_6 t7 ON (t1.preferencia_gtia = t7.Clave)
+		   ORDER BY t1.tipodoc,
+                    t1.nrodoc,
+                    t1.codprov;
+QUIT;
+
+
+/*DROPEO TABLAS INTERMEDIAS*/
+PROC SQL;
+DROP TABLE DEUDA_MES_SIN_TRADUCIR;
+DROP TABLE LOOKUP_1;
+DROP TABLE LOOKUP_2;
+DROP TABLE LOOKUP_3;
+DROP TABLE LOOKUP_4;
+DROP TABLE LOOKUP_5;
+DROP TABLE LOOKUP_6;
+QUIT;
